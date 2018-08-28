@@ -5,7 +5,9 @@ const every = require('async/every')
 const PeerId = require('peer-id')
 const CID = require('cids')
 const each = require('async/each')
+const setImmediate = require('async/setImmediate')
 // const bsplit = require('buffer-split')
+const errCode = require('err-code')
 
 module.exports = (self) => {
   return {
@@ -56,12 +58,30 @@ module.exports = (self) => {
      * @param {function(Error, Array<PeerInfo>)} [callback]
      * @returns {Promise<PeerInfo>|void}
      */
-    findprovs: promisify((key, callback) => {
-      if (typeof key === 'string') {
-        key = new CID(key)
+    findprovs: promisify((key, opts, callback) => {
+      if (typeof opts === 'function') {
+        callback = opts
+        opts = {}
       }
 
-      self._libp2pNode.contentRouting.findProviders(key, callback)
+      opts = opts || {}
+
+      if (typeof key === 'string') {
+        try {
+          key = new CID(key)
+        } catch (err) {
+          return setImmediate(() => callback(errCode(err, 'ERR_INVALID_CID')))
+        }
+      }
+
+      if (typeof opts === 'function') {
+        callback = opts
+        opts = {}
+      }
+
+      opts = opts || {}
+
+      self._libp2pNode.contentRouting.findProviders(key, opts.timeout || null, callback)
     }),
 
     /**

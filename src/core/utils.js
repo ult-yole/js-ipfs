@@ -1,9 +1,9 @@
 'use strict'
 
-const multihashes = require('multihashes')
 const promisify = require('promisify-es6')
 const map = require('async/map')
 const isIpfs = require('is-ipfs')
+const CID = require('cids')
 
 exports.OFFLINE_ERROR = 'This command must be run in online mode. Try running \'ipfs daemon\' first.'
 
@@ -61,12 +61,15 @@ const resolvePath = promisify(function (objectAPI, ipfsPaths, callback) {
 
   map(ipfsPaths, (path, cb) => {
     if (typeof path !== 'string') {
+      let cid
+
       try {
-        multihashes.validate(path)
+        cid = new CID(path)
       } catch (err) {
         return cb(err)
       }
-      return cb(null, path)
+
+      return cb(null, cid.buffer)
     }
 
     let parsedPath
@@ -76,10 +79,10 @@ const resolvePath = promisify(function (objectAPI, ipfsPaths, callback) {
       return cb(err)
     }
 
-    const rootHash = multihashes.fromB58String(parsedPath.hash)
+    const rootHash = new CID(parsedPath.hash)
     const rootLinks = parsedPath.links
     if (!rootLinks.length) {
-      return cb(null, rootHash)
+      return cb(null, rootHash.buffer)
     }
 
     objectAPI.get(rootHash, follow.bind(null, rootLinks))
@@ -107,5 +110,86 @@ const resolvePath = promisify(function (objectAPI, ipfsPaths, callback) {
   }, callback)
 })
 
+/**
+ * Parses chunker string into options used by DAGBuilder in ipfs-unixfs-engine
+ *
+ *
+ * @param  {String}   chunker Chunker algorithm supported formats:
+ *                    "size-{size}"
+ *                    "rabin"
+ *                    "rabin-{avg}"
+ *                    "rabin-{min}-{avg}-{max}"
+ *
+ * @return {Object}   Chunker options for DAGBuilder
+ */
+function parseChunkerString (chunker) {
+  if (!chunker) {
+    return {
+      chunker: 'fixed'
+    }
+  } else if (chunker.startsWith('size-')) {
+    const sizeStr = chunker.split('-')[1]
+    const size = parseInt(sizeStr)
+    if (isNaN(size)) {
+      throw new Error('Chunker parameter size must be an integer')
+    }
+    return {
+      chunker: 'fixed',
+      chunkerOptions: {
+        maxChunkSize: size
+      }
+    }
+  } else if (chunker.startsWith('rabin')) {
+    return {
+      chunker: 'rabin',
+      chunkerOptions: parseRabinString(chunker)
+    }
+  } else {
+    throw new Error(`Unrecognized chunker option: ${chunker}`)
+  }
+}
+
+/**
+ * Parses rabin chunker string
+ *
+ * @param  {String}   chunker Chunker algorithm supported formats:
+ *                            "rabin"
+ *                            "rabin-{avg}"
+ *                            "rabin-{min}-{avg}-{max}"
+ *
+ * @return {Object}   rabin chunker options
+ */
+function parseRabinString (chunker) {
+  const options = {}
+  const parts = chunker.split('-')
+  switch (parts.length) {
+    case 1:
+      options.avgChunkSize = 262144
+      break
+    case 2:
+      options.avgChunkSize = parseChunkSize(parts[1], 'avg')
+      break
+    case 4:
+      options.minChunkSize = parseChunkSize(parts[1], 'min')
+      options.avgChunkSize = parseChunkSize(parts[2], 'avg')
+      options.maxChunkSize = parseChunkSize(parts[3], 'max')
+      break
+    default:
+      throw new Error('Incorrect chunker format (expected "rabin" "rabin-[avg]" or "rabin-[min]-[avg]-[max]"')
+  }
+
+  return options
+}
+
+function parseChunkSize (str, name) {
+  let size = parseInt(str)
+  if (isNaN(size)) {
+    throw new Error(`Chunker parameter ${name} must be an integer`)
+  }
+
+  return size
+}
+
 exports.parseIpfsPath = parseIpfsPath
 exports.resolvePath = resolvePath
+exports.parseChunkerString = parseChunkerString

@@ -17,6 +17,8 @@ const Duplex = require('readable-stream').Duplex
 const OtherBuffer = require('buffer').Buffer
 const CID = require('cids')
 const toB58String = require('multihashes').toB58String
+const errCode = require('err-code')
+const parseChunkerString = require('../utils').parseChunkerString
 
 const WRAPPER = 'wrapper/'
 
@@ -89,6 +91,20 @@ function normalizeContent (opts, content) {
   })
 }
 
+function preloadFile (self, opts, file) {
+  const isRootFile = opts.wrapWithDirectory
+    ? file.path === ''
+    : !file.path.includes('/')
+
+  const shouldPreload = isRootFile && !opts.onlyHash && opts.preload !== false
+
+  if (shouldPreload) {
+    self._preload(file.hash)
+  }
+
+  return file
+}
+
 function pinFile (self, opts, file, cb) {
   // Pin a file if it is the root dir of a recursive add or the single file
   // of a direct add.
@@ -133,12 +149,18 @@ class AddHelper extends Duplex {
 }
 
 module.exports = function files (self) {
-  function _addPullStream (options) {
+  function _addPullStream (options = {}) {
+    let chunkerOptions
+    try {
+      chunkerOptions = parseChunkerString(options.chunker)
+    } catch (err) {
+      return pull.map(() => { throw err })
+    }
     const opts = Object.assign({}, {
       shardSplitThreshold: self._options.EXPERIMENTAL.sharding
         ? 1000
         : Infinity
-    }, options)
+    }, options, chunkerOptions)
 
     if (opts.hashAlg && opts.cidVersion !== 1) {
       opts.cidVersion = 1
@@ -158,6 +180,7 @@ module.exports = function files (self) {
       pull.flatten(),
       importer(self._ipld, opts),
       pull.asyncMap(prepareFile.bind(null, self, opts)),
+      pull.map(preloadFile.bind(null, self, opts)),
       pull.asyncMap(pinFile.bind(null, self, opts))
     )
   }
@@ -167,10 +190,16 @@ module.exports = function files (self) {
       throw new Error('You must supply an ipfsPath')
     }
 
+    options = options || {}
+
     ipfsPath = normalizePath(ipfsPath)
     const pathComponents = ipfsPath.split('/')
     const restPath = normalizePath(pathComponents.slice(1).join('/'))
     const filterFile = (file) => (restPath && file.path === restPath) || (file.path === ipfsPath)
+
+    if (options.preload !== false) {
+      self._preload(pathComponents[0])
+    }
 
     const d = deferred.source()
 
@@ -198,16 +227,21 @@ module.exports = function files (self) {
   }
 
   function _lsPullStreamImmutable (ipfsPath, options) {
+    options = options || {}
+
     const path = normalizePath(ipfsPath)
-    const recursive = options && options.recursive
-    const pathDepth = path.split('/').length
+    const recursive = options.recursive
+    const pathComponents = path.split('/')
+    const pathDepth = pathComponents.length
     const maxDepth = recursive ? global.Infinity : pathDepth
-    const opts = Object.assign({}, {
-      maxDepth: maxDepth
-    }, options)
+    options.maxDepth = options.maxDepth || maxDepth
+
+    if (options.preload !== false) {
+      self._preload(pathComponents[0])
+    }
 
     return pull(
-      exporter(ipfsPath, self._ipld, opts),
+      exporter(ipfsPath, self._ipld, options),
       pull.filter(node =>
         recursive ? node.depth >= pathDepth : node.depth === pathDepth
       ),
@@ -319,8 +353,18 @@ module.exports = function files (self) {
         options = {}
       }
 
-      if (typeof callback !== 'function') {
-        throw new Error('Please supply a callback to ipfs.files.get')
+      options = options || {}
+
+      if (options.preload !== false) {
+        let pathComponents
+
+        try {
+          pathComponents = normalizePath(ipfsPath).split('/')
+        } catch (err) {
+          return setImmediate(() => callback(errCode(err, 'ERR_INVALID_PATH')))
+        }
+
+        self._preload(pathComponents[0])
       }
 
       pull(
@@ -344,6 +388,20 @@ module.exports = function files (self) {
     }),
 
     getReadableStream: (ipfsPath, options) => {
+      options = options || {}
+
+      if (options.preload !== false) {
+        let pathComponents
+
+        try {
+          pathComponents = normalizePath(ipfsPath).split('/')
+        } catch (err) {
+          return toStream.source(pull.error(errCode(err, 'ERR_INVALID_PATH')))
+        }
+
+        self._preload(pathComponents[0])
+      }
+
       return toStream.source(
         pull(
           exporter(ipfsPath, self._ipld, options),
@@ -360,6 +418,20 @@ module.exports = function files (self) {
     },
 
     getPullStream: (ipfsPath, options) => {
+      options = options || {}
+
+      if (options.preload !== false) {
+        let pathComponents
+
+        try {
+          pathComponents = normalizePath(ipfsPath).split('/')
+        } catch (err) {
+          return pull.error(errCode(err, 'ERR_INVALID_PATH'))
+        }
+
+        self._preload(pathComponents[0])
+      }
+
       return exporter(ipfsPath, self._ipld, options)
     },
 
@@ -368,6 +440,8 @@ module.exports = function files (self) {
         callback = options
         options = {}
       }
+
+      options = options || {}
 
       pull(
         _lsPullStreamImmutable(ipfsPath, options),

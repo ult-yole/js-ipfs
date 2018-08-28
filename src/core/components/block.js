@@ -5,12 +5,30 @@ const multihash = require('multihashes')
 const multihashing = require('multihashing-async')
 const CID = require('cids')
 const waterfall = require('async/waterfall')
+const setImmediate = require('async/setImmediate')
 const promisify = require('promisify-es6')
+const errCode = require('err-code')
 
 module.exports = function block (self) {
   return {
-    get: promisify((cid, callback) => {
-      cid = cleanCid(cid)
+    get: promisify((cid, options, callback) => {
+      if (typeof options === 'function') {
+        callback = options
+        options = {}
+      }
+
+      options = options || {}
+
+      try {
+        cid = cleanCid(cid)
+      } catch (err) {
+        return setImmediate(() => callback(errCode(err, 'ERR_INVALID_CID')))
+      }
+
+      if (options.preload !== false) {
+        self._preload(cid)
+      }
+
       self._blockService.get(cid, callback)
     }),
     put: promisify((block, options, callback) => {
@@ -52,16 +70,38 @@ module.exports = function block (self) {
           if (err) {
             return cb(err)
           }
+
+          if (options.preload !== false) {
+            self._preload(block.cid)
+          }
+
           cb(null, block)
         })
       ], callback)
     }),
     rm: promisify((cid, callback) => {
-      cid = cleanCid(cid)
+      try {
+        cid = cleanCid(cid)
+      } catch (err) {
+        return setImmediate(() => callback(errCode(err, 'ERR_INVALID_CID')))
+      }
       self._blockService.delete(cid, callback)
     }),
-    stat: promisify((cid, callback) => {
-      cid = cleanCid(cid)
+    stat: promisify((cid, options, callback) => {
+      if (typeof options === 'function') {
+        callback = options
+        options = {}
+      }
+
+      try {
+        cid = cleanCid(cid)
+      } catch (err) {
+        return setImmediate(() => callback(errCode(err, 'ERR_INVALID_CID')))
+      }
+
+      if (options.preload !== false) {
+        self._preload(cid)
+      }
 
       self._blockService.get(cid, (err, block) => {
         if (err) {

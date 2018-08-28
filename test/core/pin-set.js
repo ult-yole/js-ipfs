@@ -31,7 +31,7 @@ function createNodes (num, callback) {
   const items = []
   for (let i = 0; i < num; i++) {
     items.push(cb =>
-      createNode(String(i), (err, node) => cb(err, node._multihash))
+      createNode(String(i), (err, node) => cb(err, node.multihash))
     )
   }
 
@@ -53,7 +53,7 @@ describe('pinSet', function () {
   let repo
 
   before(function (done) {
-    this.timeout(20 * 1000)
+    this.timeout(80 * 1000)
     repo = createTempRepo()
     ipfs = new IPFS({ repo })
     ipfs.on('ready', () => {
@@ -63,7 +63,7 @@ describe('pinSet', function () {
   })
 
   after(function (done) {
-    this.timeout(20 * 1000)
+    this.timeout(80 * 1000)
     ipfs.stop(done)
   })
 
@@ -73,7 +73,7 @@ describe('pinSet', function () {
 
       createNode('data', (err, node) => {
         expect(err).to.not.exist()
-        const nodeHash = node._multihash
+        const nodeHash = node.multihash
         pinSet.storeSet([nodeHash], (err, rootNode) => {
           expect(err).to.not.exist()
           const node = rootNode.toJSON()

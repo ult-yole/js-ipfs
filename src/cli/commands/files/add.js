@@ -135,6 +135,10 @@ module.exports = {
       default: false,
       describe: 'Only chunk and hash, do not write'
     },
+    chunker: {
+      default: 'size-262144',
+      describe: 'Chunking algorithm to use, formatted like [size-{size}, rabin, rabin-{avg}, rabin-{min}-{avg}-{max}]'
+    },
     'enable-sharding-experiment': {
       type: 'boolean',
       default: false
@@ -145,12 +149,12 @@ module.exports = {
     },
     'raw-leaves': {
       type: 'boolean',
-      default: undefined,
       describe: 'Use raw blocks for leaf nodes. (experimental)'
     },
     'cid-version': {
       type: 'integer',
-      describe: 'Cid version. Non-zero value will change default of \'raw-leaves\' to true. (experimental)'
+      describe: 'CID version. Defaults to 0 unless an option that depends on CIDv1 is passed. (experimental)',
+      default: 0
     },
     hash: {
       type: 'string',
@@ -194,35 +198,8 @@ module.exports = {
       onlyHash: argv.onlyHash,
       hashAlg: argv.hash,
       wrapWithDirectory: argv.wrapWithDirectory,
-      pin: argv.pin
-    }
-
-    // Temporary restriction on raw-leaves:
-    // When cid-version=1 then raw-leaves MUST be present and false.
-    //
-    // This is because raw-leaves is not yet implemented in js-ipfs,
-    // and go-ipfs changes the value of raw-leaves to true when
-    // cid-version > 0 unless explicitly set to false.
-    //
-    // This retains feature parity without having to implement raw-leaves.
-    if (options.cidVersion > 0 && options.rawLeaves !== false) {
-      throw new Error('Implied argument raw-leaves must be passed and set to false when cid-version is > 0')
-    }
-
-    // Temporary restriction on raw-leaves:
-    // When hash != undefined then raw-leaves MUST be present and false.
-    //
-    // This is because raw-leaves is not yet implemented in js-ipfs,
-    // and go-ipfs changes the value of raw-leaves to true when
-    // hash != undefined unless explicitly set to false.
-    //
-    // This retains feature parity without having to implement raw-leaves.
-    if (options.hash && options.rawLeaves !== false) {
-      throw new Error('Implied argument raw-leaves must be passed and set to false when hash argument is specified')
-    }
-
-    if (options.rawLeaves) {
-      throw new Error('Not implemented: raw-leaves')
+      pin: argv.pin,
+      chunker: argv.chunker
     }
 
     if (options.enableShardingExperiment && utils.isDaemonOn()) {

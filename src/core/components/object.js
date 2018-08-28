@@ -1,6 +1,7 @@
 'use strict'
 
 const waterfall = require('async/waterfall')
+const setImmediate = require('async/setImmediate')
 const promisify = require('promisify-es6')
 const dagPB = require('ipld-dag-pb')
 const DAGNode = dagPB.DAGNode
@@ -8,7 +9,7 @@ const DAGLink = dagPB.DAGLink
 const CID = require('cids')
 const mh = require('multihashes')
 const Unixfs = require('ipfs-unixfs')
-const assert = require('assert')
+const errCode = require('err-code')
 
 function normalizeMultihash (multihash, enc) {
   if (typeof multihash === 'string') {
@@ -80,10 +81,17 @@ module.exports = function object (self) {
             if (err) {
               return cb(err)
             }
-            self._ipld.put(node, {
-              cid: new CID(node.multihash)
-            }, (err) => {
-              cb(err, node)
+
+            const cid = new CID(node.multihash)
+
+            self._ipld.put(node, { cid }, (err) => {
+              if (err) return cb(err)
+
+              if (options.preload !== false) {
+                self._preload(cid)
+              }
+
+              cb(null, node)
             })
           })
         }
@@ -92,16 +100,26 @@ module.exports = function object (self) {
   }
 
   return {
-    new: promisify((template, callback) => {
+    new: promisify((template, options, callback) => {
       if (typeof template === 'function') {
         callback = template
         template = undefined
+        options = {}
       }
+
+      if (typeof options === 'function') {
+        callback = options
+        options = {}
+      }
+
+      options = options || {}
 
       let data
 
       if (template) {
-        assert(template === 'unixfs-dir', 'unkown template')
+        if (template !== 'unixfs-dir') {
+          return setImmediate(() => callback(new Error('unknown template')))
+        }
         data = (new Unixfs('directory')).marshal()
       } else {
         data = Buffer.alloc(0)
@@ -111,11 +129,16 @@ module.exports = function object (self) {
         if (err) {
           return callback(err)
         }
-        self._ipld.put(node, {
-          cid: new CID(node.multihash)
-        }, (err) => {
+
+        const cid = new CID(node.multihash)
+
+        self._ipld.put(node, { cid }, (err) => {
           if (err) {
             return callback(err)
+          }
+
+          if (options.preload !== false) {
+            self._preload(cid)
           }
 
           callback(null, node)
@@ -166,11 +189,21 @@ module.exports = function object (self) {
       }
 
       function next () {
-        self._ipld.put(node, {
-          cid: new CID(node.multihash)
-        }, (err) => {
+        let cid
+
+        try {
+          cid = new CID(node.multihash)
+        } catch (err) {
+          return setImmediate(() => callback(errCode(err, 'ERR_INVALID_CID')))
+        }
+
+        self._ipld.put(node, { cid }, (err) => {
           if (err) {
             return callback(err)
+          }
+
+          if (options.preload !== false) {
+            self._preload(cid)
           }
 
           self.object.get(node.multihash, callback)
@@ -184,17 +217,26 @@ module.exports = function object (self) {
         options = {}
       }
 
-      let mh
+      let mh, cid
 
       try {
         mh = normalizeMultihash(multihash, options.enc)
       } catch (err) {
-        return callback(err)
+        return setImmediate(() => callback(errCode(err, 'ERR_INVALID_MULTIHASH')))
       }
-      let cid = new CID(mh)
+
+      try {
+        cid = new CID(mh)
+      } catch (err) {
+        return setImmediate(() => callback(errCode(err, 'ERR_INVALID_CID')))
+      }
 
       if (options.cidVersion === 1) {
         cid = cid.toV1()
+      }
+
+      if (options.preload !== false) {
+        self._preload(cid)
       }
 
       self._ipld.get(cid, (err, result) => {
@@ -282,6 +324,8 @@ module.exports = function object (self) {
         editAndSave((node, cb) => {
           if (DAGLink.isDAGLink(linkRef)) {
             linkRef = linkRef._name
+          } else if (linkRef && linkRef.name) {
+            linkRef = linkRef.name
           }
           DAGNode.rmLink(node, linkRef, cb)
         })(multihash, options, callback)
