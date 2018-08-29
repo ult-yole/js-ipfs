@@ -8,16 +8,20 @@ const CID = require('cids')
 const PeerId = require('peer-id')
 const errCode = require('err-code')
 
-function formatWantlist (list) {
-  return Array.from(list).map((e) => ({ '/': e[1].cid.toBaseEncodedString() }))
+function wantlistToCidArray (list) {
+  return Array.from(list).map((e) => e[1].cid)
 }
 
 module.exports = function bitswap (self) {
   return {
-    wantlist: promisify((peerId, callback) => {
-      if (!callback) {
+    wantlist: promisify((peerId, options, callback) => {
+      if (typeof peerId === 'function') {
         callback = peerId
-        peerId = undefined
+        options = {}
+        peerId = null
+      } else if (typeof options === 'function') {
+        callback = options
+        options = {}
       }
 
       if (!self.isOnline()) {
@@ -38,27 +42,34 @@ module.exports = function bitswap (self) {
       } else {
         list = self._bitswap.getWantlist()
       }
-      list = formatWantlist(list)
-      return setImmediate(() => callback(null, { Keys: list }))
+
+      setImmediate(() => callback(null, wantlistToCidArray(list)))
     }),
 
-    stat: promisify((callback) => {
+    stat: promisify((options, callback) => {
+      if (typeof options === 'function') {
+        callback = options
+        options = {}
+      }
+
       if (!self.isOnline()) {
         return setImmediate(() => callback(new Error(OFFLINE_ERROR)))
       }
 
       const snapshot = self._bitswap.stat().snapshot
 
-      callback(null, {
-        provideBufLen: parseInt(snapshot.providesBufferLength.toString()),
-        blocksReceived: new Big(snapshot.blocksReceived),
-        wantlist: formatWantlist(self._bitswap.getWantlist()),
-        peers: self._bitswap.peers().map((id) => id.toB58String()),
-        dupBlksReceived: new Big(snapshot.dupBlksReceived),
-        dupDataReceived: new Big(snapshot.dupDataReceived),
-        dataReceived: new Big(snapshot.dataReceived),
-        blocksSent: new Big(snapshot.blocksSent),
-        dataSent: new Big(snapshot.dataSent)
+      setImmediate(() => {
+        callback(null, {
+          provideBufLen: parseInt(snapshot.providesBufferLength.toString()),
+          blocksReceived: new Big(snapshot.blocksReceived),
+          wantlist: wantlistToCidArray(self._bitswap.getWantlist()),
+          peers: self._bitswap.peers().map((id) => id.toB58String()),
+          dupBlksReceived: new Big(snapshot.dupBlksReceived),
+          dupDataReceived: new Big(snapshot.dupDataReceived),
+          dataReceived: new Big(snapshot.dataReceived),
+          blocksSent: new Big(snapshot.blocksSent),
+          dataSent: new Big(snapshot.dataSent)
+        })
       })
     }),
 
@@ -82,7 +93,7 @@ module.exports = function bitswap (self) {
         return setImmediate(() => callback(errCode(err, 'ERR_INVALID_CID')))
       }
 
-      return setImmediate(() => callback(null, self._bitswap.unwant(keys)))
+      setImmediate(() => callback(null, self._bitswap.unwant(keys)))
     })
   }
 }

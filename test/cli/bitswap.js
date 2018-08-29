@@ -4,6 +4,7 @@
 const expect = require('chai').expect
 const runOn = require('../utils/on-and-off').on
 const PeerId = require('peer-id')
+const CID = require('cids')
 
 describe('bitswap', () => runOn((thing) => {
   let ipfs
@@ -30,6 +31,13 @@ describe('bitswap', () => runOn((thing) => {
     })
   })
 
+  it('should get wantlist with CIDs encoded in specified base', function () {
+    this.timeout(20 * 1000)
+    return ipfs('bitswap wantlist --cid-base=base32').then((out) => {
+      expect(out).to.eql(new CID(key).toV1().toBaseEncodedString('base32') + '\n')
+    })
+  })
+
   it('wantlist peerid', function () {
     this.timeout(20 * 1000)
     return ipfs('bitswap wantlist ' + peerId).then((out) => {
@@ -51,6 +59,13 @@ describe('bitswap', () => runOn((thing) => {
         // We sometimes pick up partners while the tests run so our assertion ends here
         '  partners'
       ].join('\n'))
+    })
+  })
+
+  it('should get stats with wantlist CIDs encoded in specified base', function () {
+    this.timeout(20 * 1000)
+    return ipfs('bitswap stat --cid-base=base32').then((out) => {
+      expect(out).to.include(new CID(key).toV1().toBaseEncodedString('base32'))
     })
   })
 

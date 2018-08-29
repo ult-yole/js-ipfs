@@ -1,5 +1,7 @@
 'use strict'
 
+const multibase = require('multibase')
+const { cidToString } = require('../../../utils/cid')
 const print = require('../../utils').print
 
 module.exports = {
@@ -12,16 +14,21 @@ module.exports = {
       alias: 'p',
       describe: 'Specify which peer to show wantlist for.',
       type: 'string'
+    },
+    'cid-base': {
+      describe: 'Number base to display CIDs in.',
+      type: 'string',
+      choices: multibase.names
     }
   },
 
   handler (argv) {
-    argv.ipfs.bitswap.wantlist(argv.peer, (err, res) => {
+    argv.ipfs.bitswap.wantlist(argv.peer, (err, cids) => {
       if (err) {
         throw err
       }
-      res.Keys.forEach((cid) => {
-        print(cid['/'])
+      cids.forEach((cid) => {
+        print(cidToString(cid, argv.cidBase))
       })
     })
   }
