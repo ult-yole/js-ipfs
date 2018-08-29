@@ -2,8 +2,46 @@
 
 const series = require('async/series')
 const Bitswap = require('ipfs-bitswap')
+const get = require('lodash/get')
 const setImmediate = require('async/setImmediate')
 const promisify = require('promisify-es6')
+const TieredStore = require('datastore-core').TieredDatastore
+
+const IPNS = require('../ipns')
+const DatastorePubsub = require('../ipns/datastore-pubsub')
+
+// -----------------------------------------------------------------
+// TODO move to js-ipns
+const ipns = require('ipns')
+
+const validator = {
+  validate: (data, peerId, callback) => {
+    const receivedIpnsEntry = ipns.unmarshal(data)
+
+    // extract public key
+    ipns.extractPublicKey(peerId, receivedIpnsEntry, (err, pubKey) => {
+      if (err) {
+        return callback(err)
+      }
+
+      // Record validation
+      ipns.validate(pubKey, receivedIpnsEntry, (err) => {
+        if (err) {
+          return callback(err)
+        }
+
+        callback(null, true)
+      })
+    })
+  },
+  select: (receivedRecod, currentRecord, callback) => {
+    const receivedIpnsEntry = ipns.unmarshal(receivedRecod)
+    const currentIpnsEntry = ipns.unmarshal(currentRecord)
+
+    callback(null, receivedIpnsEntry.sequence > currentIpnsEntry.sequence ? 0 : 1)
+  }
+}
+// -----------------------------------------------------------------
 
 module.exports = (self) => {
   return promisify((callback) => {
@@ -34,6 +72,26 @@ module.exports = (self) => {
       },
       (cb) => self.libp2p.start(cb),
       (cb) => {
+        // Setup online routing for IPNS with a tiered routing composed by a DHT and a Pubsub router (if properly enabled)
+        const stores = []
+
+        // Add IPNS pubsub if enabled
+        if (get(self._options, 'EXPERIMENTAL.ipnsPubsub', false)) {
+          // const floodSub = self._libp2pNode._floodSub // TODO should be floodsub?
+          const pubsub = self._libp2pNode.pubsub
+          const localDatastore = self._repo.datastore
+          const peerId = self._peerInfo.id
+          const datastorePubsub = new DatastorePubsub(pubsub, localDatastore, peerId, validator)
+
+          stores.push(datastorePubsub)
+        }
+
+        // NOTE: For now, the DHT is being replaced by the local repo datastore
+        stores.push(self._repo.datastore)
+
+        const routing = new TieredStore(stores)
+        self._ipns = new IPNS(routing, self)
+
         self._bitswap = new Bitswap(
           self._libp2pNode,
           self._repo.blocks,
