@@ -14,6 +14,7 @@ const toStream = require('pull-stream-to-stream')
 const abortable = require('pull-abortable')
 const Joi = require('joi')
 const ndjson = require('pull-ndjson')
+const multibase = require('multibase')
 
 exports = module.exports
 
@@ -283,6 +284,12 @@ exports.add = {
 }
 
 exports.immutableLs = {
+  validate: {
+    query: Joi.object()
+      .keys({ 'cid-base': Joi.string().valid(multibase.names) })
+      .options({ allowUnknown: true })
+  },
+
   // uses common parseKey method that returns a `key`
   parseArgs: exports.parseKey,
 
@@ -306,7 +313,7 @@ exports.immutableLs = {
           Hash: key,
           Links: files.map((file) => ({
             Name: file.name,
-            Hash: file.hash,
+            Hash: file.hash.toBaseEncodedString(request.query['cid-base']),
             Size: file.size,
             Type: toTypeCode(file.type),
             Depth: file.depth

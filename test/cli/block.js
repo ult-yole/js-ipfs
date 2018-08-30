@@ -26,7 +26,7 @@ describe('block', () => runOnAndOff((thing) => {
         expect(out).to.eql('z43AaGF23fmvRnDP56Ub9WcJCfzSfqtmzNCCvmz5eudT8dtdCDS\n'))
   })
 
-  it.only('should put and print CID encoded in specified base', function () {
+  it('should put and print CID encoded in specified base', function () {
     this.timeout(40 * 1000)
 
     return ipfs('block put test/fixtures/test-data/hello --cid-base=base32').then((out) => {
@@ -63,7 +63,7 @@ describe('block', () => runOnAndOff((thing) => {
       })
   })
 
-  it.only('should stat and print CID encoded in specified base', function () {
+  it('should stat and print CID encoded in specified base', function () {
     this.timeout(80 * 1000)
 
     return ipfs('block put test/fixtures/test-data/hello')

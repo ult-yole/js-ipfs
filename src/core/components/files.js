@@ -246,8 +246,10 @@ module.exports = function files (self) {
         recursive ? node.depth >= pathDepth : node.depth === pathDepth
       ),
       pull.map(node => {
-        const cid = new CID(node.hash)
-        node = Object.assign({}, node, { hash: cid.toBaseEncodedString() })
+        // TODO: is this check required - is node.hash from exporter always a CID now?
+        if (!CID.isCID(node.hash)) {
+          node = Object.assign({}, node, { hash: new CID(node.hash) })
+        }
         delete node.content
         return node
       })
