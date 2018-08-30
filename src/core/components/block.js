@@ -1,7 +1,6 @@
 'use strict'
 
 const Block = require('ipfs-block')
-const multihash = require('multihashes')
 const multihashing = require('multihashing-async')
 const CID = require('cids')
 const waterfall = require('async/waterfall')
@@ -108,7 +107,7 @@ module.exports = function block (self) {
           return callback(err)
         }
         callback(null, {
-          key: multihash.toB58String(cid.multihash),
+          key: cid,
           size: block.data.length
         })
       })

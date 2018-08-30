@@ -12,12 +12,10 @@ exports = module.exports
 exports.wantlist = {
   validate: {
     query: Joi.object()
-      .keys({
-        'cid-base': Joi.string().valid(multibase.names)
-      })
-      // TODO: Necessary until validate "recursive", "stream-channels" etc.
+      .keys({ 'cid-base': Joi.string().valid(multibase.names) })
       .options({ allowUnknown: true })
   },
+
   handler: (request, reply) => {
     const peerId = request.query.peer
     request.server.app.ipfs.bitswap.wantlist(peerId, (err, list) => {
@@ -32,12 +30,10 @@ exports.wantlist = {
 exports.stat = {
   validate: {
     query: Joi.object()
-      .keys({
-        'cid-base': Joi.string().valid(multibase.names)
-      })
-      // TODO: Necessary until validate "recursive", "stream-channels" etc.
+      .keys({ 'cid-base': Joi.string().valid(multibase.names) })
       .options({ allowUnknown: true })
   },
+
   handler: (request, reply) => {
     const ipfs = request.server.app.ipfs
 

@@ -26,6 +26,14 @@ describe('block', () => runOnAndOff((thing) => {
         expect(out).to.eql('z43AaGF23fmvRnDP56Ub9WcJCfzSfqtmzNCCvmz5eudT8dtdCDS\n'))
   })
 
+  it.only('should put and print CID encoded in specified base', function () {
+    this.timeout(40 * 1000)
+
+    return ipfs('block put test/fixtures/test-data/hello --cid-base=base32').then((out) => {
+      expect(out).to.eql('bafybeifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4\n')
+    })
+  })
+
   it('get', function () {
     this.timeout(40 * 1000)
 
@@ -50,6 +58,22 @@ describe('block', () => runOnAndOff((thing) => {
       .then((out) => {
         expect(out).to.eql([
           'Key: QmZjTnYw2TFhn9Nn7tjmPSoTBoY7YRkwPzwSrSbabY24Kp',
+          'Size: 12'
+        ].join('\n') + '\n')
+      })
+  })
+
+  it.only('should stat and print CID encoded in specified base', function () {
+    this.timeout(80 * 1000)
+
+    return ipfs('block put test/fixtures/test-data/hello')
+      .then((out) => {
+        expect(out).to.eql('QmZjTnYw2TFhn9Nn7tjmPSoTBoY7YRkwPzwSrSbabY24Kp\n')
+        return ipfs('block stat QmZjTnYw2TFhn9Nn7tjmPSoTBoY7YRkwPzwSrSbabY24Kp --cid-base=base32')
+      })
+      .then((out) => {
+        expect(out).to.eql([
+          'Key: bafybeifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4',
           'Size: 12'
         ].join('\n') + '\n')
       })
