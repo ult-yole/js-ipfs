@@ -3,11 +3,14 @@
 const Block = require('ipfs-block')
 const multihash = require('multihashes')
 const multihashing = require('multihashing-async')
+const multipart = require('ipfs-multipart')
 const CID = require('cids')
 const waterfall = require('async/waterfall')
 const setImmediate = require('async/setImmediate')
 const promisify = require('promisify-es6')
 const errCode = require('err-code')
+const bl = require('bl')
+const fs = require('fs')
 
 module.exports = function block (self) {
   return {
@@ -25,10 +28,12 @@ module.exports = function block (self) {
         return setImmediate(() => callback(errCode(err, 'ERR_INVALID_CID')))
       }
 
+      // Should be preload === true
       if (options.preload !== false) {
         self._preload(cid)
       }
 
+      // options is ignored?
       self._blockService.get(cid, callback)
     }),
     put: promisify((block, options, callback) => {
@@ -113,6 +118,202 @@ module.exports = function block (self) {
         })
       })
     })
+  }
+}
+
+const showHelp = () => { /* show help helper function */ }
+
+const getKey = (request, reply) => {
+  return reply({
+    key: new CID(request.query.arg)
+  })
+}
+module.exports._getKey = getKey
+
+const getBlock = (blockApi, cid, callback) => {
+  try {
+    cid = cleanCid(cid)
+  } catch (err) {
+    return callback(err)
+  }
+  return blockApi.get(cid, callback)
+}
+
+const readFileFromRequestPayload = (request, reply) => {
+  const parser = multipart.reqParser(request.payload)
+  var file
+
+  parser.on('file', (fileName, fileStream) => {
+    file = Buffer.alloc(0)
+
+    fileStream.on('data', (data) => {
+      file = Buffer.concat([file, data])
+    })
+  })
+
+  parser.on('end', () => {
+    if (!file) {
+      return reply({
+        Message: "File argument 'data' is required",
+        Code: 0
+      }).code(400).takeover()
+    }
+
+    return reply({
+      data: file
+    })
+  })
+}
+
+module.exports.__api = {
+  name: 'block',
+  cli: 'block <command>',
+  description: 'Manipulate raw IPFS blocks',
+  children: {
+    get: {
+      description: 'Get a raw IPFS block',
+      args: ['cid', 'options'],
+      requiredArgs: ['cid'],
+      httpArgs: ['key'],
+      preload: true,
+      call: (self, cid, options, callback) => {
+        return getBlock(self.block, cid, callback)
+      },
+      http: {
+        pre: getKey,
+        post: (block) => {
+          return block.data
+        }
+      },
+      cli: {
+        command: 'get <key>',
+        post: (block, print) => {
+          if (block) {
+            print(block.data, false)
+          } else {
+            print('Block was unwanted before it could be remotely retrieved')
+          }
+        }
+      },
+      streamOutput: true
+    },
+    put: {
+      description: 'Stores input as an IPFS block (accepts input via stdin)',
+      args: ['block', 'options'],
+      requiredArgs: ['block'],
+      httpArgs: ['data'],
+      preload: true,
+      payload: {
+        parse: false,
+        output: 'stream'
+      },
+      http: {
+        pre: readFileFromRequestPayload,
+        call: (self, data, options, callback) => {
+          waterfall([
+            (cb) => multihashing(data, 'sha2-256', (err, multihash) => {
+              if (err) {
+                return cb(err)
+              }
+              cb(null, new Block(data, new CID(multihash)))
+            }),
+            (block, cb) => {
+              self.block.put(block, cb)
+            }
+          ], callback)
+        },
+        post: (block) => {
+          return {
+            Key: block.cid.toBaseEncodedString(),
+            Size: block.data.length
+          }
+        }
+      },
+      cli: {
+        command: 'put [block]',
+        pre: (argv, callback) => {
+          if (argv.block) {
+            const buf = fs.readFileSync(argv.block)
+            return callback(null, buf)
+          }
+
+          process.stdin.pipe(bl(callback))
+        },
+        call: (self, data, options, callback) => {
+          waterfall([
+            (cb) => multihashing(data, options.mhtype || 'sha2-256', cb),
+            (multihash, cb) => {
+              let cid
+              if (options.format !== 'dag-pb' || options.version !== 0) {
+                cid = new CID(1, options.format || 'dag-pb', multihash)
+              } else {
+                cid = new CID(0, 'dag-pb', multihash)
+              }
+
+              self.block.put(new Block(data, cid), (err) => {
+                callback(err, cid)
+              })
+            }
+          ], callback)
+        },
+        post: (cid, print) => {
+          print(cid.toBaseEncodedString())
+        },
+        builder: {
+          format: {
+            alias: 'f',
+            describe: 'cid format for blocks to be created with.',
+            default: 'dag-pb'
+          },
+          mhtype: {
+            describe: 'multihash hash function',
+            default: 'sha2-256'
+          },
+          mhlen: {
+            describe: 'multihash hash length',
+            default: undefined
+          },
+          version: {
+            describe: 'cid version',
+            type: 'number',
+            default: 0
+          }
+        }
+      }
+    },
+    // rm: {},
+    stat: {
+      description: 'Print information of a raw IPFS block',
+      args: ['cid', 'options'],
+      requiredArgs: ['cid'],
+      httpArgs: ['key'],
+      preload: false,
+      call: (self, cid, options, callback) => {
+        return getBlock(self.block, cid, (err, block) => {
+          if (err) return callback(err)
+          callback(null, {
+            key: multihash.toB58String(block.cid.multihash),
+            size: block.data.length
+          })
+        })
+      },
+      cli: {
+        command: 'stat <key>',
+        post: (stats, print) => {
+          print('Key: ' + stats.key)
+          print('Size: ' + stats.size)
+        }
+      },
+      http: {
+        pre: getKey,
+        post: (stats) => {
+          return {
+            Key: stats.key,
+            Size: stats.size
+          }
+        }
+      }
+    }
   }
 }
 

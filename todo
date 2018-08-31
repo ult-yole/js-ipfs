@@ -1,0 +1,11 @@
+- [ ] Handle no/one/multiple args better
+- [ ] Fix the mess with `httpArgs`, `args` and `builder`, unify args
+- [ ] Fix `block.put` working different in http/cli
+- [ ] `object` methods too while you're at it
+- [ ] Finish all tests
+- [ ] Try to think of a better name than `Commands`
+- [ ] Make `preload` to work
+- [ ] Automatically replace `call` with the component function if not defined?
+- [ ] Implement `GolangFormatting` function for HTTP responses
+- [ ] Automatically do `JSON.stringify()` for `cli.post` if not defined
+- [ ] Automatically do `GolangFormatting` for `http.post` if not defined

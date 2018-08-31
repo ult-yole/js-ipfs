@@ -346,3 +346,69 @@ module.exports = function object (self) {
     })
   }
 }
+
+module.exports.__api = {
+  name: 'object',
+  cli: 'object <command>',
+  description: 'Interact with ipfs objects',
+  children: {
+    new: {
+      description: 'Create new ipfs objects',
+      args: ['template'],
+      httpArgs: ['template'],
+      preload: false,
+      call: (self, template, options, callback) => {
+        return self.object.new(template, callback)
+      },
+      cli: {
+        command: 'new [<template>]',
+        post: (node, printer) => {
+          const nodeJSON = node.toJSON()
+          printer(nodeJSON.multihash)
+        }
+      }
+    },
+    get: {
+      description: 'Get and serialize the DAG node named by <key>',
+      args: ['key'],
+      httpArgs: ['key'],
+      preload: false,
+      call: (self, key, options, callback) => {
+        return self.object.get(key, (err, node) => {
+          if (err) {
+            return callback(err)
+          }
+          const nodeJSON = node.toJSON()
+          if (Buffer.isBuffer(node.data)) {
+            nodeJSON.data = node.data.toString(options['data-encoding'] || undefined)
+          }
+          callback(null, nodeJSON)
+        })
+
+      },
+      cli: {
+        command: 'get <key>',
+        post: (nodeJSON, printer) => {
+          printer(JSON.stringify({
+            Data: nodeJSON.data,
+            Hash: nodeJSON.multihash,
+            Size: nodeJSON.size,
+            Links: nodeJSON.links.map((l) => {
+              return {
+                Name: l.name,
+                Size: l.size,
+                Hash: l.multihash
+              }
+            })
+          }))
+        }
+      }
+    },
+    patch: {
+      children: {
+        'set-data': {
+        }
+      }
+    }
+  }
+}

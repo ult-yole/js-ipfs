@@ -88,6 +88,25 @@ if (args[0] === 'daemon' || args[0] === 'init') {
         cli.command(alias)
       })
 
+      const cmdsToLoad = [
+        'block',
+        'id',
+        'object'
+      ]
+
+      const block = require('../core/components/block')
+      const id = require('../core/components/id')
+
+      const Commands = require('../commands.js')
+      const commands = new Commands()
+
+      cmdsToLoad.forEach((cmd) => {
+        const module = require('../core/components/' + cmd)
+        commands.add(module.__api)
+      })
+
+      commands.initCLI(cli)
+
       cli
         .commandDir('commands')
         .help()
@@ -96,7 +115,7 @@ if (args[0] === 'daemon' || args[0] === 'init') {
 
       let exitCode = 0
 
-      const parser = new YargsPromise(cli, { ipfs })
+      const parser = new YargsPromise(cli, { ipfs, printer: print })
       parser.parse(args)
         .then(({ data, argv }) => {
           if (data) {

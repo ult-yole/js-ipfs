@@ -12,7 +12,7 @@ const waterfall = require('async/waterfall')
 const DaemonFactory = require('ipfsd-ctl')
 const df = DaemonFactory.create({ exec: 'src/cli/bin.js' })
 
-describe('block endpoint', () => {
+describe.only('block endpoint', () => {
   let ipfs = null
   let ipfsd = null
 

@@ -4,7 +4,7 @@
 const expect = require('chai').expect
 
 module.exports = (http) => {
-  describe('/id', () => {
+  describe.only('/id', () => {
     let api
 
     before(() => {

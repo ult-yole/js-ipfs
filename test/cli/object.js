@@ -10,7 +10,7 @@ const fs = require('fs')
 const crypto = require('crypto')
 const os = require('os')
 
-describe('object', () => runOnAndOff((thing) => {
+describe.only('object', () => runOnAndOff((thing) => {
   let ipfs
 
   before(() => {

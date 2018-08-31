@@ -55,7 +55,7 @@ skipOnWindows('id endpoint', () => {
     })
   })
 
-  describe('.id', () => {
+  describe.only('.id', () => {
     it('get the identity', (done) => {
       ipfs.id((err, result) => {
         expect(err).to.not.exist()
