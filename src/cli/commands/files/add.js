@@ -12,7 +12,8 @@ const byteman = require('byteman')
 const waterfall = require('async/waterfall')
 const mh = require('multihashes')
 const multibase = require('multibase')
-const { cidToString, print, isDaemonOn, createProgressBar } = require('../../utils')
+const { print, isDaemonOn, createProgressBar } = require('../../utils')
+const { cidToString } = require('../../../utils/cid')
 
 function checkPath (inPath, recursive) {
   // This function is to check for the following possible inputs

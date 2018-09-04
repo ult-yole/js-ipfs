@@ -1,7 +1,8 @@
 'use strict'
 
 const multibase = require('multibase')
-const { cidToString, print } = require('../../utils')
+const { print } = require('../../utils')
+const { cidToString } = require('../../../utils/cid')
 
 module.exports = {
   command: 'stat',

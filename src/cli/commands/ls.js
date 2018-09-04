@@ -1,7 +1,8 @@
 'use strict'
 
 const multibase = require('multibase')
-const { cidToString, print, rightpad } = require('../utils')
+const { print, rightpad } = require('../utils')
+const { cidToString } = require('../../utils/cid')
 
 module.exports = {
   command: 'ls <key>',

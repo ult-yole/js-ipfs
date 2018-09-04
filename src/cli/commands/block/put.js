@@ -7,7 +7,8 @@ const fs = require('fs')
 const Block = require('ipfs-block')
 const waterfall = require('async/waterfall')
 const multibase = require('multibase')
-const { cidToString, print } = require('../../utils')
+const { print } = require('../../utils')
+const { cidToString } = require('../../../utils/cid')
 
 function addBlock (data, opts) {
   const ipfs = opts.ipfs
