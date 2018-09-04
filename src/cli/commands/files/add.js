@@ -11,9 +11,8 @@ const getFolderSize = require('get-folder-size')
 const byteman = require('byteman')
 const waterfall = require('async/waterfall')
 const mh = require('multihashes')
-const utils = require('../../utils')
-const print = require('../../utils').print
-const createProgressBar = require('../../utils').createProgressBar
+const multibase = require('multibase')
+const { cidToString, print, isDaemonOn, createProgressBar } = require('../../utils')
 
 function checkPath (inPath, recursive) {
   // This function is to check for the following possible inputs
@@ -90,7 +89,7 @@ function addPipeline (index, addStream, list, argv) {
       sortBy(added, 'path')
         .reverse()
         .map((file) => {
-          const log = [ 'added', file.hash ]
+          const log = [ 'added', cidToString(file.hash, argv.cidBase) ]
 
           if (!quiet && file.path.length > 0) log.push(file.path)
 
@@ -156,10 +155,15 @@ module.exports = {
       describe: 'CID version. Defaults to 0 unless an option that depends on CIDv1 is passed. (experimental)',
       default: 0
     },
+    'cid-base': {
+      describe: 'Number base to display CIDs in.',
+      type: 'string',
+      choices: multibase.names
+    },
     hash: {
       type: 'string',
       choices: Object.keys(mh.names),
-      describe: 'Hash function to use. Will set Cid version to 1 if used. (experimental)'
+      describe: 'Hash function to use. Will set CID version to 1 if used. (experimental)'
     },
     quiet: {
       alias: 'q',
@@ -202,7 +206,7 @@ module.exports = {
       chunker: argv.chunker
     }
 
-    if (options.enableShardingExperiment && utils.isDaemonOn()) {
+    if (options.enableShardingExperiment && isDaemonOn()) {
       throw new Error('Error: Enabling the sharding experiment should be done on the daemon')
     }
     const ipfs = argv.ipfs

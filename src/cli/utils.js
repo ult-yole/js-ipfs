@@ -118,3 +118,11 @@ exports.rightpad = (val, n) => {
 exports.ipfsPathHelp = 'ipfs uses a repository in the local file system. By default, the repo is ' +
   'located at ~/.jsipfs. To change the repo location, set the $IPFS_PATH environment variable:\n\n' +
   'export IPFS_PATH=/path/to/ipfsrepo\n'
+
+// Stringify a CID in the requested base, auto-converting to v1 if necessary
+exports.cidToString = (cid, base) => {
+  if (cid.version === 0 && base && base !== 'base58btc') {
+    cid = cid.toV1()
+  }
+  return cid.toBaseEncodedString(base)
+}

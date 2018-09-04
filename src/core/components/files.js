@@ -10,7 +10,6 @@ const pushable = require('pull-pushable')
 const toStream = require('pull-stream-to-stream')
 const toPull = require('stream-to-pull-stream')
 const deferred = require('pull-defer')
-const waterfall = require('async/waterfall')
 const isStream = require('is-stream')
 const isSource = require('is-pull-stream').isSource
 const Duplex = require('readable-stream').Duplex
@@ -24,7 +23,7 @@ const WRAPPER = 'wrapper/'
 
 function noop () {}
 
-function prepareFile (self, opts, file, callback) {
+function prepareFile (file, opts) {
   opts = opts || {}
 
   let cid = new CID(file.multihash)
@@ -33,23 +32,16 @@ function prepareFile (self, opts, file, callback) {
     cid = cid.toV1()
   }
 
-  waterfall([
-    (cb) => opts.onlyHash
-      ? cb(null, file)
-      : self.object.get(file.multihash, opts, cb),
-    (node, cb) => {
-      const b58Hash = cid.toBaseEncodedString()
-
-      cb(null, {
-        path: opts.wrapWithDirectory ? file.path.substring(WRAPPER.length) : (file.path || b58Hash),
-        hash: b58Hash,
-        size: node.size
-      })
-    }
-  ], callback)
+  return {
+    path: opts.wrapWithDirectory
+      ? file.path.substring(WRAPPER.length)
+      : (file.path || cid.toBaseEncodedString()),
+    hash: cid,
+    size: file.size
+  }
 }
 
-function normalizeContent (opts, content) {
+function normalizeContent (content, opts) {
   if (!Array.isArray(content)) {
     content = [content]
   }
@@ -91,7 +83,7 @@ function normalizeContent (opts, content) {
   })
 }
 
-function preloadFile (self, opts, file) {
+function preloadFile (file, self, opts) {
   const isRootFile = opts.wrapWithDirectory
     ? file.path === ''
     : !file.path.includes('/')
@@ -105,7 +97,7 @@ function preloadFile (self, opts, file) {
   return file
 }
 
-function pinFile (self, opts, file, cb) {
+function pinFile (file, self, opts, cb) {
   // Pin a file if it is the root dir of a recursive add or the single file
   // of a direct add.
   const pin = 'pin' in opts ? opts.pin : true
@@ -176,12 +168,12 @@ module.exports = function files (self) {
 
     opts.progress = progress
     return pull(
-      pull.map(normalizeContent.bind(null, opts)),
+      pull.map(content => normalizeContent(content, opts)),
       pull.flatten(),
       importer(self._ipld, opts),
-      pull.asyncMap(prepareFile.bind(null, self, opts)),
-      pull.map(preloadFile.bind(null, self, opts)),
-      pull.asyncMap(pinFile.bind(null, self, opts))
+      pull.map(file => prepareFile(file, opts)),
+      pull.map(file => preloadFile(file, self, opts)),
+      pull.asyncMap((file, cb) => pinFile(file, self, opts, cb))
     )
   }
 

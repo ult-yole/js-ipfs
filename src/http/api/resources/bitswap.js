@@ -1,39 +1,23 @@
 'use strict'
 
 const boom = require('boom')
-const Joi = require('joi')
-const multibase = require('multibase')
-const { cidToString } = require('../../../utils/cid')
-
 const parseKey = require('./block').parseKey
 
 exports = module.exports
 
 exports.wantlist = {
-  validate: {
-    query: Joi.object()
-      .keys({ 'cid-base': Joi.string().valid(multibase.names) })
-      .options({ allowUnknown: true })
-  },
-
   handler: (request, reply) => {
     const peerId = request.query.peer
     request.server.app.ipfs.bitswap.wantlist(peerId, (err, list) => {
       if (err) {
         return reply(boom.badRequest(err))
       }
-      reply({ Keys: list.map(cid => cidToString(cid, request.query['cid-base'])) })
+      reply({ Keys: list.map(cid => cid.toBaseEncodedString()) })
     })
   }
 }
 
 exports.stat = {
-  validate: {
-    query: Joi.object()
-      .keys({ 'cid-base': Joi.string().valid(multibase.names) })
-      .options({ allowUnknown: true })
-  },
-
   handler: (request, reply) => {
     const ipfs = request.server.app.ipfs
 
@@ -48,7 +32,7 @@ exports.stat = {
       reply({
         ProvideBufLen: stats.provideBufLen,
         BlocksReceived: stats.blocksReceived,
-        Wantlist: stats.wantlist.map((cid) => ({ '/': cidToString(cid, request.query['cid-base']) })),
+        Wantlist: stats.wantlist.map(cid => ({ '/': cid.toBaseEncodedString() })),
         Peers: stats.peers,
         DupBlksReceived: stats.dupBlksReceived,
         DupDataReceived: stats.dupDataReceived,

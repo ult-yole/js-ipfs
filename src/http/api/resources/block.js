@@ -5,11 +5,8 @@ const multipart = require('ipfs-multipart')
 const Block = require('ipfs-block')
 const waterfall = require('async/waterfall')
 const multihashing = require('multihashing-async')
-const multibase = require('multibase')
 const Buffer = require('safe-buffer').Buffer
 const debug = require('debug')
-const Joi = require('joi')
-const { cidToString } = require('../../../utils/cid')
 const log = debug('jsipfs:http-api:block')
 log.error = debug('jsipfs:http-api:block:error')
 
@@ -64,12 +61,6 @@ exports.get = {
 }
 
 exports.put = {
-  validate: {
-    query: Joi.object()
-      .keys({ 'cid-base': Joi.string().valid(multibase.names) })
-      .options({ allowUnknown: true })
-  },
-
   // pre request handler that parses the args and returns `data` which is assigned to `request.pre.args`
   parseArgs: (request, reply) => {
     if (!request.payload) {
@@ -127,7 +118,7 @@ exports.put = {
       }
 
       return reply({
-        Key: cidToString(block.cid, request.query['cid-base']),
+        Key: block.cid.toBaseEncodedString(),
         Size: block.data.length
       })
     })
@@ -157,12 +148,6 @@ exports.del = {
 }
 
 exports.stat = {
-  validate: {
-    query: Joi.object()
-      .keys({ 'cid-base': Joi.string().valid(multibase.names) })
-      .options({ allowUnknown: true })
-  },
-
   // uses common parseKey method that returns a `key`
   parseArgs: exports.parseKey,
 
@@ -179,7 +164,7 @@ exports.stat = {
       }
 
       return reply({
-        Key: cidToString(stats.key, request.query['cid-base']),
+        Key: stats.key.toBaseEncodedString(),
         Size: stats.size
       })
     })
