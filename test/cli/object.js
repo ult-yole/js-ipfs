@@ -85,6 +85,15 @@ describe('object', () => runOnAndOff((thing) => {
     })
   })
 
+  it.only('should put and print CID encoded in specified base', () => {
+    return ipfs('object put test/fixtures/test-data/node.json --cid-base=base32')
+      .then((out) => {
+        expect(out).to.eql(
+          'added bafybeifgztjwgxwk32f5kfclmfiq5ogznigozu54c3ukg5yi73xj777fmq\n'
+        )
+      })
+  })
+
   it('stat', function () {
     this.timeout(40 * 1000)
 
