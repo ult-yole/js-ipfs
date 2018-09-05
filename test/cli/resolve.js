@@ -32,7 +32,7 @@ describe('resolve', () => runOnAndOff((thing) => {
       })
   })
 
-  it.only('should resolve an IPFS hash and print CID encoded in specified base', function () {
+  it('should resolve an IPFS hash and print CID encoded in specified base', function () {
     this.timeout(10 * 1000)
 
     const filePath = path.join(process.cwd(), '/src/init-files/init-docs/readme')

@@ -33,6 +33,14 @@ describe('object', () => runOnAndOff((thing) => {
     })
   })
 
+  it('should new and print CID encoded in specified base', () => {
+    return ipfs('object new --cid-base=base32').then((out) => {
+      expect(out).to.eql(
+        'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\n'
+      )
+    })
+  })
+
   it('get', () => {
     return ipfs('object get QmdfTbBqBPQ7VNxZEYEj14VmRuZBkqFbiwReogJgS1zR1n').then((out) => {
       const result = JSON.parse(out)
