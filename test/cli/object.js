@@ -77,6 +77,17 @@ describe('object', () => runOnAndOff((thing) => {
       })
   })
 
+  it('should get and print CIDs encoded in specified base', () => {
+    return ipfs('object put test/fixtures/test-data/node.json')
+      .then(out => out.replace('added', '').trim())
+      .then(cid => ipfs(`object get ${cid} --cid-base=base64`))
+      .then(out => {
+        const result = JSON.parse(out)
+        expect(result.Hash).to.equal('mAXASIKbM02Neyt6L1RRLYVEOuNlqDOzTvBboo3cI/u6f/+Vk')
+        expect(result.Links[0].Hash).to.equal('mAXASIIq3psXnRzeHisc4Y8t2c50V1GZt5E5XVr9Vovnpq19E')
+      })
+  })
+
   it('put', () => {
     return ipfs('object put test/fixtures/test-data/node.json').then((out) => {
       expect(out).to.eql(
@@ -85,7 +96,7 @@ describe('object', () => runOnAndOff((thing) => {
     })
   })
 
-  it.only('should put and print CID encoded in specified base', () => {
+  it('should put and print CID encoded in specified base', () => {
     return ipfs('object put test/fixtures/test-data/node.json --cid-base=base32')
       .then((out) => {
         expect(out).to.eql(
