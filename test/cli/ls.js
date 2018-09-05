@@ -93,14 +93,14 @@ describe('ls', () => runOnAndOff((thing) => {
   it('should ls and print CIDs encoded in specified base', function () {
     this.timeout(20 * 1000)
 
-    return ipfs('ls Qmaj2NmcyAXT8dFmZRRytE12wpcaHADzbChKToMEjBsj5Z --cid-base=base32')
+    return ipfs('ls Qmaj2NmcyAXT8dFmZRRytE12wpcaHADzbChKToMEjBsj5Z --cid-base=base64')
       .then((out) => {
         expect(out).to.eql(
-          'bafybeifytw6v2wfoqhf2qg7gxf4srvf4wvivpj3flvfprs7bwi26c5xwka 123530 blocks/\n' +
-          'bafybeiau7bsysegdiiakjoqndqoffduxwpe2zcteojzmmykku3oqrxwcxe 3939   config\n' +
-          'bafybeidavfe4h7gos22avjjazfijd7bjwqfi6km5ildhw6y6luvq5he3be 5503   datastore/\n' +
-          'bafybeic6pq6oen7zg3dw7l3cl2ipo5i2t5powbeplgdtga6ccxu4z2dvte 7397   init-docs/\n' +
-          'bafybeibis3s2rprkeu5neckitbbqzerb3i2shaek7jl3fgxceije54rbza 10     version\n'
+          'mAXASILidvV1YroHLqBvmuXko1Ly1UVenZV1K+MvhsjXhdvZQ 123530 blocks/\n' +
+          'mAXASIBT4ZYkQw0IApLoNHBxSjpezyayKZHJyxmFKpt0I3sK5 3939   config\n' +
+          'mAXASIGCpScP8zpa0CqUgyVCR/Cm0Co8pnULGe3seXSsOnJsJ 5503   datastore/\n' +
+          'mAXASIF58POI3+TbHb69iXpD3dRqfXusEj1mHMwPCFenM6HWZ 7397   init-docs/\n' +
+          'mAXASICiW5ai+KiU60glImEMMkiHaNSOAivpXspriIhJO8iHI 10     version\n'
         )
       })
   })

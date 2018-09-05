@@ -33,8 +33,8 @@ describe('bitswap', () => runOn((thing) => {
 
   it('should get wantlist with CIDs encoded in specified base', function () {
     this.timeout(20 * 1000)
-    return ipfs('bitswap wantlist --cid-base=base32').then((out) => {
-      expect(out).to.eql(new CID(key).toV1().toBaseEncodedString('base32') + '\n')
+    return ipfs('bitswap wantlist --cid-base=base64').then((out) => {
+      expect(out).to.eql(new CID(key).toV1().toBaseEncodedString('base64') + '\n')
     })
   })
 
@@ -64,8 +64,8 @@ describe('bitswap', () => runOn((thing) => {
 
   it('should get stats with wantlist CIDs encoded in specified base', function () {
     this.timeout(20 * 1000)
-    return ipfs('bitswap stat --cid-base=base32').then((out) => {
-      expect(out).to.include(new CID(key).toV1().toBaseEncodedString('base32'))
+    return ipfs('bitswap stat --cid-base=base64').then((out) => {
+      expect(out).to.include(new CID(key).toV1().toBaseEncodedString('base64'))
     })
   })
 

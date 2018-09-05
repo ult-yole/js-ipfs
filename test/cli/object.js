@@ -34,9 +34,9 @@ describe('object', () => runOnAndOff((thing) => {
   })
 
   it('should new and print CID encoded in specified base', () => {
-    return ipfs('object new --cid-base=base32').then((out) => {
+    return ipfs('object new --cid-base=base64').then((out) => {
       expect(out).to.eql(
-        'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku\n'
+        'mAXASIOOwxEKY/BwUmvv0yJlvuSQnrkHkZJuTTKSVmRt4UrhV\n'
       )
     })
   })
@@ -97,10 +97,10 @@ describe('object', () => runOnAndOff((thing) => {
   })
 
   it('should put and print CID encoded in specified base', () => {
-    return ipfs('object put test/fixtures/test-data/node.json --cid-base=base32')
+    return ipfs('object put test/fixtures/test-data/node.json --cid-base=base64')
       .then((out) => {
         expect(out).to.eql(
-          'added bafybeifgztjwgxwk32f5kfclmfiq5ogznigozu54c3ukg5yi73xj777fmq\n'
+          'added mAXASIKbM02Neyt6L1RRLYVEOuNlqDOzTvBboo3cI/u6f/+Vk\n'
         )
       })
   })

@@ -37,17 +37,17 @@ describe('resolve', () => runOnAndOff((thing) => {
 
     const filePath = path.join(process.cwd(), '/src/init-files/init-docs/readme')
     let b58Hash
-    let b32Hash
+    let b64Hash
 
     return ipfs(`add ${filePath}`)
       .then((out) => {
         b58Hash = out.split(' ')[1]
         expect(isIpfs.cid(b58Hash)).to.be.true()
-        b32Hash = new CID(b58Hash).toV1().toBaseEncodedString('base32')
-        return ipfs(`resolve /ipfs/${b58Hash} --cid-base=base32`)
+        b64Hash = new CID(b58Hash).toV1().toBaseEncodedString('base64')
+        return ipfs(`resolve /ipfs/${b58Hash} --cid-base=base64`)
       })
       .then((out) => {
-        expect(out).to.contain(`/ipfs/${b32Hash}`)
+        expect(out).to.contain(`/ipfs/${b64Hash}`)
       })
   })
 

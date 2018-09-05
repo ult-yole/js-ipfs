@@ -29,8 +29,8 @@ describe('block', () => runOnAndOff((thing) => {
   it('should put and print CID encoded in specified base', function () {
     this.timeout(40 * 1000)
 
-    return ipfs('block put test/fixtures/test-data/hello --cid-base=base32').then((out) => {
-      expect(out).to.eql('bafybeifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4\n')
+    return ipfs('block put test/fixtures/test-data/hello --cid-base=base64').then((out) => {
+      expect(out).to.eql('mAXASIKlIkE8vD0ebj4GXaUswGEsNLtHBzSoewPuF0pmhkqRH\n')
     })
   })
 
@@ -69,11 +69,11 @@ describe('block', () => runOnAndOff((thing) => {
     return ipfs('block put test/fixtures/test-data/hello')
       .then((out) => {
         expect(out).to.eql('QmZjTnYw2TFhn9Nn7tjmPSoTBoY7YRkwPzwSrSbabY24Kp\n')
-        return ipfs('block stat QmZjTnYw2TFhn9Nn7tjmPSoTBoY7YRkwPzwSrSbabY24Kp --cid-base=base32')
+        return ipfs('block stat QmZjTnYw2TFhn9Nn7tjmPSoTBoY7YRkwPzwSrSbabY24Kp --cid-base=base64')
       })
       .then((out) => {
         expect(out).to.eql([
-          'Key: bafybeifjjcie6lypi6ny7amxnfftagclbuxndqonfipmb64f2km2devei4',
+          'Key: mAXASIKlIkE8vD0ebj4GXaUswGEsNLtHBzSoewPuF0pmhkqRH',
           'Size: 12'
         ].join('\n') + '\n')
       })
