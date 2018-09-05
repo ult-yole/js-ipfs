@@ -154,6 +154,15 @@ describe('object', () => runOnAndOff((thing) => {
     })
   })
 
+  it('should get links and print CIDs encoded in specified base', () => {
+    return ipfs('object put test/fixtures/test-data/node.json')
+      .then(out => out.replace('added', '').trim())
+      .then(cid => ipfs(`object links ${cid} --cid-base=base64`))
+      .then(out => {
+        expect(out).to.equal('mAXASIIq3psXnRzeHisc4Y8t2c50V1GZt5E5XVr9Vovnpq19E 8 some link\n')
+      })
+  })
+
   describe('patch', function () {
     this.timeout(40 * 1000)
 
